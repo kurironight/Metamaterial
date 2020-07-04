@@ -1,4 +1,6 @@
 import numpy as np
+from scipy.sparse.linalg import spsolve
+from scipy.sparse import csr_matrix
 
 nx = 2
 ny = 2
@@ -11,7 +13,7 @@ E = 1
 def run():
     K = np.zeros((2 * (nx + 1) * (ny + 1), 2 * (nx + 1)
                   * (ny + 1)), dtype=np.float64)
-    U = np.zeros((2 * (nx + 1) * (ny + 1), 1), dtype=np.float64)
+    U = np.zeros((2 * (nx + 1) * (ny + 1)), dtype=np.float64)
     for y in range(1, ny+1):
         for x in range(1, nx+1):
             n1 = (ny + 1) * (x - 1) + y
@@ -24,9 +26,23 @@ def run():
             K_mat = Kmat_pl4(xc, yc, po)
             elem -= 1  # indexを指定する為
             K[np.ix_(elem, elem)] += K_mat  # 深いコピーになる
-    np.set_printoptions(threshold=10000)
-    # csvファイルとして保存
-    np.savetxt('out.csv', K, delimiter=',')
+
+    # Boundary Condition
+    F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
+    F[2*(ny+1)*(nx)+2] = 1
+    FixDOF = [2 * ny + 1, 2 * (ny + 1), 2 * (nx + 1) * (ny + 1)]
+
+    # 要素番号は1~2 * (nx + 1) * (ny + 1)まで
+    FreeDOF = list(range(1, 2 * (nx + 1) * (ny + 1)+1))
+    for i in FixDOF:
+        FreeDOF.remove(i)
+    # indexを示す為
+    FreeDOF = np.array(FreeDOF) - 1
+    FixDOF = np.array(FixDOF) - 1
+    target_K = csr_matrix(K[np.ix_(FreeDOF, FreeDOF)])
+    U[FreeDOF] = spsolve(
+        target_K,   F[FreeDOF], use_umfpack=True)
+    U[FixDOF] = 0
 
 
 def dmat_pl4(E, po, nstr=1):
