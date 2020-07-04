@@ -95,6 +95,14 @@ def gauss_point():
 
 
 def bmat_pl4(a, b, xc, yc):
+    """Bマトリックスとヤコビアンを求める
+
+    Args:
+        a (number): ガウスポイントの座標
+        b (number): ガウスポイントの座標
+        xc (list): 要素を構成する節点のx座標
+        yc (list): 要素を構成する節点のy座標
+    """
     # Bマトリックスとヤコビアンを導出
     # aとbには,ガウスpointが入る
     x1, x2, x3, x4 = xc
