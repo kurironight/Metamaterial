@@ -2,13 +2,13 @@ import numpy as np
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 
-nx = 2
+nx = 1
 ny = 2
-
-rho = np.ones((nx, ny))
-po = 0.3
-E = 1
-
+E=3600 # ヤング率
+rho = np.ones((ny, nx))
+po = 0.3 #ポアソン比
+pnl=3 #ペナルティパラメータ
+t=1 #要素の厚み方向の長さ
 
 def run():
     K = np.zeros((2 * (nx + 1) * (ny + 1), 2 * (nx + 1)
@@ -21,18 +21,18 @@ def run():
             # 要素を構成する要素番号(x,yそれぞれを含む，奇数がx，偶数がy)
             elem = np.array([2*n1-1, 2*n1, 2*n2-1, 2*n2,
                              2*n2+1, 2*n2+2, 2*n1+1, 2*n1+2])
-            xc = [x - 1, x, x, x - 1]  # x座標の範囲は0~nx
-            yc = [y - 1, y - 1, y, y]  # y座標の範囲は0~ny
-            K_mat = Kmat_pl4(xc, yc, po)
+            xc = [x - 1, x, x, x - 1]  # x節点の範囲は0~nx
+            yc = [y - 1, y - 1, y, y]  # y節点の範囲は0~ny
+            K_mat = Kmat_pl4(xc, yc, po,rho[y-1,x-1])
             elem -= 1  # indexを指定する為
             K[np.ix_(elem, elem)] += K_mat  # 深いコピーになる
 
     # Boundary Condition
     F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
-    F[2*(ny+1)*(nx)+2] = 1
-    FixDOF = [2 * ny + 1, 2 * (ny + 1), 2 * (nx + 1) * (ny + 1)]
+    F[9-1]=10
 
-    # 要素番号は1~2 * (nx + 1) * (ny + 1)まで
+    # 節点番号は1~2 * (nx + 1) * (ny + 1)まで
+    FixDOF = list(range(1, 2 * (ny + 1)+1))
     FreeDOF = list(range(1, 2 * (nx + 1) * (ny + 1)+1))
     for i in FixDOF:
         FreeDOF.remove(i)
@@ -43,9 +43,11 @@ def run():
     U[FreeDOF] = spsolve(
         target_K,   F[FreeDOF], use_umfpack=True)
     U[FixDOF] = 0
+    
+    print(U)
 
 
-def dmat_pl4(E, po, nstr=1):
+def dmat_pl4(Eelem, po, nstr=1):
     # Dマトリックス作成
     # nstr=0の時，平面歪み，1の時，平面応力
     D_mat = np.zeros((3, 3), dtype=np.float64)
@@ -55,41 +57,45 @@ def dmat_pl4(E, po, nstr=1):
         D_mat[1, 0] = po
         D_mat[1, 1] = 1-po
         D_mat[2, 2] = 0.5*(1-2*po)
-        D_mat = E/(1+po)/(1-2*po)*D_mat
+        D_mat = Eelem/(1+po)/(1-2*po)*D_mat
     else:  # plane stress
         D_mat[0, 0] = 1
         D_mat[0, 1] = po
         D_mat[1, 0] = po
         D_mat[1, 1] = 1
         D_mat[2, 2] = 0.5*(1-po)
-        D_mat = E/(1-po**2)*D_mat
+        D_mat = Eelem/(1-po**2)*D_mat
     return D_mat
 
 
-def Kmat_pl4(xc, yc, po, t=1):
+def Kmat_pl4(xc, yc, po,rho, t=t):
     """各四角形事のKマトリックスを作成
 
     Args:
         xc ([list]): 要素を構成するx座標のリスト
         yc ([list]): 要素を構成するy座標のリスト
-        po ([type]): ポアソン比
-        t (int, optional): z方向の要素の厚み. Defaults to 1.
+        po (float): ポアソン比
+        rho(np.float): 要素の密度
+        t (int, optional): z方向の要素の厚み.
     """
+    Emin=10**(-3)
+    Eelem= (E-Emin)*rho**pnl+Emin # 密度に対しての材料物性値の調整
     K_mat = np.zeros((8, 8))
-    D_mat = dmat_pl4(E, po)
+    D_mat = dmat_pl4(Eelem, po)
     point, weight = gauss_point()
     for i in range(4):
         B_mat, detJ = bmat_pl4(point[i, 0], point[i, 1], xc, yc)
         K_mat = K_mat + weight[i] * \
             np.dot(B_mat.T, np.dot(D_mat, B_mat)) * t * detJ
+
     return K_mat
 
 
 def gauss_point():
-    point = np.array([[-3 ** (1 / 2), -3 ** (1 / 2)],
-                      [3 ** (1 / 2), -3 ** (1 / 2)],
-                      [3 ** (1 / 2), 3 ** (1 / 2)],
-                      [-3 ** (1 / 2), 3 ** (1 / 2)]], dtype=np.float64)
+    point = np.array([[-3 ** (-1 / 2), -3 ** (-1 / 2)],
+                      [3 ** (-1 / 2), -3 ** (-1 / 2)],
+                      [3 ** (-1 / 2), 3 ** (-1 / 2)],
+                      [-3 ** (-1 / 2), 3 ** (-1 / 2)]], dtype=np.float64)
     weight = [1, 1, 1, 1]
     return point, weight
 
