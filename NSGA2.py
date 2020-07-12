@@ -71,5 +71,6 @@ for solution in [s for s in nondominated_solutions if s.feasible]:
     fig = plt.figure()
     _ = plt.pcolormesh(X, Y, image, cmap="binary")
     plt.axis("off")
+    ## TODO 四分割ではなく，全体像を出力
     fig.savefig(os.path.join(PATH,"image.png"))
-    ## TODO 四分割となっているところを，全体図を見せるようにする
+    np.save(os.path.join(PATH,'E{}_G{}.npy'.format(solution.objectives[0],solution.objectives[1])),image)
