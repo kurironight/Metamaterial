@@ -13,14 +13,14 @@ rho=np.array([[1,1,0],
 po = 0.3 #ポアソン比
 pnl=3 #ペナルティパラメータ
 t=1 #要素の厚み方向の長さ
+cut_thresh=10**(-2) # 材料が存在するかどうかの基準密度
 
-cut_thresh=10**(-2)
 ## TODO バーを作成するプログラム
 
 
 ## TODO バーの下，材料を配置するプログラム
 
-## TODO 縦弾性係数,せん断弾性を求める
+
 def calc_E(rho,total_F=1.0,cut_thresh=cut_thresh):
     """縦弾性係数を求める
 
@@ -30,7 +30,7 @@ def calc_E(rho,total_F=1.0,cut_thresh=cut_thresh):
         cut_thresh (float, optional): 材料が存在するかしないかを決めるもの. Defaults to cut_thresh.
 
     Returns:
-        [type]: [description]
+        numpy.float: 縦弾性係数
     """
     rho[rho<cut_thresh]=0   
     ny,nx=rho.shape
@@ -61,6 +61,10 @@ def calc_G(rho,total_F=1.0,cut_thresh=cut_thresh):
     Args:
         rho (np.array): 材料密度分布（1/4の構造を示している）
         total_F (float, optional): 構造にかけるせん断力の総量. Defaults to 1.
+        cut_thresh (float, optional): 材料が存在するかしないかを決めるもの. Defaults to cut_thresh.
+
+    Returns:
+        numpy.float: せん断弾性係数
     """ 
     rho[rho<cut_thresh]=0  
     left_rho=np.fliplr(rho).copy()
