@@ -2,49 +2,91 @@ import numpy as np
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 
-E=0.5 # ヤング率
-#rho = np.ones((ny, nx))
+E=1 # ヤング率
+#rho = np.ones((2, 2))
 
-rho=np.array([[1,1,1],
+rho=np.array([[1,1,0],
                 [1,0,0],
-                [1,1,1],
+                [1,0,0],
                 [1,1,1],]
                 )
 po = 0.3 #ポアソン比
 pnl=3 #ペナルティパラメータ
 t=1 #要素の厚み方向の長さ
 
+cut_thresh=10**(-2)
 ## TODO バーを作成するプログラム
 
 
 ## TODO バーの下，材料を配置するプログラム
 
 ## TODO 縦弾性係数,せん断弾性を求める
-def calc_E(rho,total_F=1.0):
+def calc_E(rho,total_F=1.0,cut_thresh=cut_thresh):
     """縦弾性係数を求める
 
     Args:
         rho (np.array): 材料密度分布
         total_F (float, optional): 構造にかける圧力の総量. Defaults to 1.
-    """ 
+        cut_thresh (float, optional): 材料が存在するかしないかを決めるもの. Defaults to cut_thresh.
+
+    Returns:
+        [type]: [description]
+    """
+    rho[rho<cut_thresh]=0   
     ny,nx=rho.shape
-    # 縦弾性係数の境界条件
+    # 境界条件　左端x軸方向固定　上端y軸方向固定 右端　x正方向に分散荷重
     FixDOF_left_edge = list(range(1, 2 * (ny + 1),2))
     FixDOF_up_edge = list(range(2, 2 * (nx + 1)* (ny + 1),2 * (ny + 1)))
     FixDOF=FixDOF_left_edge+FixDOF_up_edge
 
     F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
     F_index=np.where(rho[:,-1]!=0)[0]*2+ 2 * nx* (ny + 1) #python用のindexにした
-    F[F_index]+=1/2 #構造端部においての力が1/2になるようにする為
+    F[F_index]+=1/2 #要素端部においての力が1/2になるようにする為
     F[F_index+2]+=1/2
-    F/=np.sum(F)*total_F # 分散荷重の大きさを正規化
+    F=F/np.sum(F)*total_F # 分散荷重の大きさを正規化
+
+    # 有限要素法適用
     U=FEM(rho,FixDOF,F)
     U=U.reshape([-1,2])
-    change=np.mean(U[nx*(ny + 1):,0])
+    element_exist_index= np.where(rho[:,-1]!=0)[0]+ nx* (ny + 1)#密度が１の要素における変位のみにフォーカス
+    element_exist_index=np.unique(np.concatenate([element_exist_index,element_exist_index+1]))
+    change=np.mean(U[element_exist_index,0])
     E=change/total_F
 
     return E
 
+def calc_G(rho,total_F=1.0,cut_thresh=cut_thresh):
+    """せん断弾性係数を求める
+
+    Args:
+        rho (np.array): 材料密度分布（1/4の構造を示している）
+        total_F (float, optional): 構造にかけるせん断力の総量. Defaults to 1.
+    """ 
+    rho[rho<cut_thresh]=0  
+    left_rho=np.fliplr(rho).copy()
+    down_rho=np.concatenate([left_rho,rho],1)
+    up_rho=np.flipud(down_rho).copy()
+    whole_rho=np.concatenate([up_rho,down_rho],0)
+    ny,nx=whole_rho.shape
+    # 境界条件　左端固定　右端　y正方向にせん断荷重
+    FixDOF_left_edge = list(range(1, 2 * (ny + 1)))
+    FixDOF=FixDOF_left_edge
+
+    F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
+    F_index=np.where(whole_rho[:,-1]!=0)[0]*2+ 2 * nx* (ny + 1) #python用のindexにした
+    F[F_index+1]+=1/2 #要素端部においての力が1/2になるようにする為
+    F[F_index+3]+=1/2
+    F=F/np.sum(F)*total_F # 分散荷重の大きさを正規化
+    
+    # 有限要素法適用
+    U=FEM(whole_rho,FixDOF,F)
+    U=U.reshape([-1,2])
+    element_exist_index= np.where(whole_rho[:,-1]!=0)[0]+ nx* (ny + 1)#密度が１の要素における変位のみにフォーカス
+    element_exist_index=np.unique(np.concatenate([element_exist_index,element_exist_index+1]))
+    change=np.mean(U[element_exist_index,1])
+    G=change/nx/total_F
+
+    return G
 
 
 def FEM(rho,FixDOF,F):
@@ -67,8 +109,6 @@ def FEM(rho,FixDOF,F):
     U[FreeDOF] = spsolve(
         target_K,   F[FreeDOF], use_umfpack=True)
     U[FixDOF] = 0
-    print(U)
-
     return U
 
 def make_K_mat(rho):
@@ -121,7 +161,7 @@ def Kmat_pl4(xc, yc, po,rho, t=t):
         rho(np.float): 要素の密度
         t (int, optional): z方向の要素の厚み.
     """
-    Emin=10**(-3)
+    Emin=10**(-5)
     Eelem= (E-Emin)*rho**pnl+Emin # 密度に対しての材料物性値の調整
     K_mat = np.zeros((8, 8))
     D_mat = dmat_pl4(Eelem, po)
@@ -193,4 +233,4 @@ def bmat_pl4(a, b, xc, yc):
     return bm, detJ
 
 
-calc_E(rho)
+calc_G(rho,total_F=1.0)
