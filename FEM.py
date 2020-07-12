@@ -4,16 +4,26 @@ from scipy.sparse import csr_matrix
 
 nx = 1
 ny = 2
-E=3600 # ヤング率
+E=0.5 # ヤング率
 rho = np.ones((ny, nx))
 po = 0.3 #ポアソン比
 pnl=3 #ペナルティパラメータ
 t=1 #要素の厚み方向の長さ
 
-def run():
+## TODO バーを作成するプログラム
+
+
+## TODO バーの下，材料を配置するプログラム
+
+## TODO せん断弾性，縦弾性係数を求める
+
+
+def make_K_mat(rho):
+    # 全体のK行列を作成
+
+    ny,nx=rho.shape
     K = np.zeros((2 * (nx + 1) * (ny + 1), 2 * (nx + 1)
                   * (ny + 1)), dtype=np.float64)
-    U = np.zeros((2 * (nx + 1) * (ny + 1)), dtype=np.float64)
     for y in range(1, ny+1):
         for x in range(1, nx+1):
             n1 = (ny + 1) * (x - 1) + y
@@ -26,7 +36,11 @@ def run():
             K_mat = Kmat_pl4(xc, yc, po,rho[y-1,x-1])
             elem -= 1  # indexを指定する為
             K[np.ix_(elem, elem)] += K_mat  # 深いコピーになる
+    return K
 
+def FEM(rho):
+    K=make_K_mat(rho)
+    U = np.zeros((2 * (nx + 1) * (ny + 1)), dtype=np.float64)
     # Boundary Condition
     F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
     F[9-1]=10
@@ -43,10 +57,8 @@ def run():
     U[FreeDOF] = spsolve(
         target_K,   F[FreeDOF], use_umfpack=True)
     U[FixDOF] = 0
+
     
-    print(U)
-
-
 def dmat_pl4(Eelem, po, nstr=1):
     # Dマトリックス作成
     # nstr=0の時，平面歪み，1の時，平面応力
@@ -150,4 +162,4 @@ def bmat_pl4(a, b, xc, yc):
     return bm, detJ
 
 
-run()
+FEM(rho)
