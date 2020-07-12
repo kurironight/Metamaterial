@@ -11,8 +11,8 @@ import os
 nx=20
 ny=20
 volume_frac=0.5
-parent=10
-generation=1
+parent=100
+generation=10000
 PATH=os.path.join("data", "nx_{}_ny_{}".format(nx,ny),"gen_{}_pa_{}".format(generation,parent))
 os.makedirs(PATH, exist_ok=True)
 # 目的関数の設定
@@ -72,5 +72,5 @@ for solution in [s for s in nondominated_solutions if s.feasible]:
     _ = plt.pcolormesh(X, Y, image, cmap="binary")
     plt.axis("off")
     ## TODO 四分割ではなく，全体像を出力
-    fig.savefig(os.path.join(PATH,"image.png"))
+    fig.savefig(os.path.join(PATH,"image_E{}_G{}.png"))
     np.save(os.path.join(PATH,'E{}_G{}.npy'.format(solution.objectives[0],solution.objectives[1])),image)
