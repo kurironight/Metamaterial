@@ -6,13 +6,13 @@ import numpy as np
 import pickle
 from PIL import Image
 import os 
-
+from convert_npy_to_image import convert_folder_npy_to_image
 
 nx=20
 ny=20
 volume_frac=0.5
 parent=100
-generation=10000
+generation=1
 PATH=os.path.join("data", "nx_{}_ny_{}".format(nx,ny),"gen_{}_pa_{}".format(generation,parent))
 os.makedirs(PATH, exist_ok=True)
 # 目的関数の設定
@@ -65,12 +65,6 @@ for solution in [s for s in nondominated_solutions if s.feasible]:
         image_list.append(j)
     image=np.array(image_list).reshape(ny,nx-1)
     image=np.concatenate([image,np.ones((ny,1))],1)
-    x = np.arange(0, nx) #x軸の描画範囲の生成。
-    y = np.arange(0, ny) #y軸の描画範囲の生成。
-    X, Y = np.meshgrid(x, y)
-    fig = plt.figure()
-    _ = plt.pcolormesh(X, Y, image, cmap="binary")
-    plt.axis("off")
-    ## TODO 四分割ではなく，全体像を出力
-    fig.savefig(os.path.join(PATH,"image_E{}_G{}.png"))
-    np.save(os.path.join(PATH,'E{}_G{}.npy'.format(solution.objectives[0],solution.objectives[1])),image)
+    np.save(os.path.join(PATH,'E_{}_G_{}.npy'.format(solution.objectives[0],solution.objectives[1])),image)
+
+convert_folder_npy_to_image(PATH)
