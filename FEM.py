@@ -2,10 +2,14 @@ import numpy as np
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 
-nx = 1
-ny = 2
 E=0.5 # ヤング率
-rho = np.ones((ny, nx))
+#rho = np.ones((ny, nx))
+
+rho=np.array([[1,1,1],
+                [1,0,0],
+                [1,1,1],
+                [1,1,1],]
+                )
 po = 0.3 #ポアソン比
 pnl=3 #ペナルティパラメータ
 t=1 #要素の厚み方向の長さ
@@ -15,12 +19,60 @@ t=1 #要素の厚み方向の長さ
 
 ## TODO バーの下，材料を配置するプログラム
 
-## TODO せん断弾性，縦弾性係数を求める
+## TODO 縦弾性係数,せん断弾性を求める
+def calc_E(rho,total_F=1.0):
+    """縦弾性係数を求める
 
+    Args:
+        rho (np.array): 材料密度分布
+        total_F (float, optional): 構造にかける圧力の総量. Defaults to 1.
+    """ 
+    ny,nx=rho.shape
+    # 縦弾性係数の境界条件
+    FixDOF_left_edge = list(range(1, 2 * (ny + 1),2))
+    FixDOF_up_edge = list(range(2, 2 * (nx + 1)* (ny + 1),2 * (ny + 1)))
+    FixDOF=FixDOF_left_edge+FixDOF_up_edge
+
+    F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
+    F_index=np.where(rho[:,-1]!=0)[0]*2+ 2 * nx* (ny + 1) #python用のindexにした
+    F[F_index]+=1/2 #構造端部においての力が1/2になるようにする為
+    F[F_index+2]+=1/2
+    F/=np.sum(F)*total_F # 分散荷重の大きさを正規化
+    U=FEM(rho,FixDOF,F)
+    U=U.reshape([-1,2])
+    change=np.mean(U[nx*(ny + 1):,0])
+    E=change/total_F
+
+    return E
+
+
+
+def FEM(rho,FixDOF,F):
+    K=make_K_mat(rho)
+    ny,nx=rho.shape
+    U = np.zeros((2 * (nx + 1) * (ny + 1)), dtype=np.float64)
+    # Boundary Condition
+    #F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
+    #F[9-1]=10
+
+    # 節点番号は1~2 * (nx + 1) * (ny + 1)まで
+    FixDOF = list(range(1, 2 * (ny + 1)+1))
+    FreeDOF = list(range(1, 2 * (nx + 1) * (ny + 1)+1))
+    for i in FixDOF:
+        FreeDOF.remove(i)
+    # indexを示す為
+    FreeDOF = np.array(FreeDOF) - 1
+    FixDOF = np.array(FixDOF) - 1
+    target_K = csr_matrix(K[np.ix_(FreeDOF, FreeDOF)])
+    U[FreeDOF] = spsolve(
+        target_K,   F[FreeDOF], use_umfpack=True)
+    U[FixDOF] = 0
+    print(U)
+
+    return U
 
 def make_K_mat(rho):
     # 全体のK行列を作成
-
     ny,nx=rho.shape
     K = np.zeros((2 * (nx + 1) * (ny + 1), 2 * (nx + 1)
                   * (ny + 1)), dtype=np.float64)
@@ -37,27 +89,6 @@ def make_K_mat(rho):
             elem -= 1  # indexを指定する為
             K[np.ix_(elem, elem)] += K_mat  # 深いコピーになる
     return K
-
-def FEM(rho):
-    K=make_K_mat(rho)
-    U = np.zeros((2 * (nx + 1) * (ny + 1)), dtype=np.float64)
-    # Boundary Condition
-    F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
-    F[9-1]=10
-
-    # 節点番号は1~2 * (nx + 1) * (ny + 1)まで
-    FixDOF = list(range(1, 2 * (ny + 1)+1))
-    FreeDOF = list(range(1, 2 * (nx + 1) * (ny + 1)+1))
-    for i in FixDOF:
-        FreeDOF.remove(i)
-    # indexを示す為
-    FreeDOF = np.array(FreeDOF) - 1
-    FixDOF = np.array(FixDOF) - 1
-    target_K = csr_matrix(K[np.ix_(FreeDOF, FreeDOF)])
-    U[FreeDOF] = spsolve(
-        target_K,   F[FreeDOF], use_umfpack=True)
-    U[FixDOF] = 0
-
     
 def dmat_pl4(Eelem, po, nstr=1):
     # Dマトリックス作成
@@ -162,4 +193,4 @@ def bmat_pl4(a, b, xc, yc):
     return bm, detJ
 
 
-FEM(rho)
+calc_E(rho)
