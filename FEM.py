@@ -21,12 +21,11 @@ cut_thresh=10**(-2) # 材料が存在するかどうかの基準密度
 ## TODO バーの下，材料を配置するプログラム
 
 
-def calc_E(rho,total_F=1.0,cut_thresh=cut_thresh):
+def calc_E(rho,cut_thresh=cut_thresh):
     """縦弾性係数を求める
 
     Args:
         rho (np.array): 材料密度分布
-        total_F (float, optional): 構造にかける圧力の総量. Defaults to 1.
         cut_thresh (float, optional): 材料が存在するかしないかを決めるもの. Defaults to cut_thresh.
 
     Returns:
@@ -43,7 +42,7 @@ def calc_E(rho,total_F=1.0,cut_thresh=cut_thresh):
     F_index=np.where(rho[:,-1]!=0)[0]*2+ 2 * nx* (ny + 1) #python用のindexにした
     F[F_index]+=1/2 #要素端部においての力が1/2になるようにする為
     F[F_index+2]+=1/2
-    F=F/np.sum(F)*total_F # 分散荷重の大きさを正規化
+    F=F/np.sum(F) # 分散荷重の大きさを正規化
 
     # 有限要素法適用
     U=FEM(rho,FixDOF,F)
@@ -51,16 +50,14 @@ def calc_E(rho,total_F=1.0,cut_thresh=cut_thresh):
     element_exist_index= np.where(rho[:,-1]!=0)[0]+ nx* (ny + 1)#密度が１の要素における変位のみにフォーカス
     element_exist_index=np.unique(np.concatenate([element_exist_index,element_exist_index+1]))
     change=np.mean(U[element_exist_index,0])
-    E=change/total_F
-
+    E=(1/ny)/(change/nx) #応力/ひずみ
     return E
 
-def calc_G(rho,total_F=1.0,cut_thresh=cut_thresh):
+def calc_G(rho,cut_thresh=cut_thresh):
     """せん断弾性係数を求める
 
     Args:
         rho (np.array): 材料密度分布（1/4の構造を示している）
-        total_F (float, optional): 構造にかけるせん断力の総量. Defaults to 1.
         cut_thresh (float, optional): 材料が存在するかしないかを決めるもの. Defaults to cut_thresh.
 
     Returns:
@@ -80,7 +77,7 @@ def calc_G(rho,total_F=1.0,cut_thresh=cut_thresh):
     F_index=np.where(whole_rho[:,-1]!=0)[0]*2+ 2 * nx* (ny + 1) #python用のindexにした
     F[F_index+1]+=1/2 #要素端部においての力が1/2になるようにする為
     F[F_index+3]+=1/2
-    F=F/np.sum(F)*total_F # 分散荷重の大きさを正規化
+    F=F/np.sum(F) # 分散荷重の大きさを正規化
     
     # 有限要素法適用
     U=FEM(whole_rho,FixDOF,F)
@@ -88,8 +85,7 @@ def calc_G(rho,total_F=1.0,cut_thresh=cut_thresh):
     element_exist_index= np.where(whole_rho[:,-1]!=0)[0]+ nx* (ny + 1)#密度が１の要素における変位のみにフォーカス
     element_exist_index=np.unique(np.concatenate([element_exist_index,element_exist_index+1]))
     change=np.mean(U[element_exist_index,1])
-    G=change/nx/total_F
-
+    G=(1/nx)/(change/nx) #せん断応力/せん断ひずみ
     return G
 
 
@@ -236,5 +232,3 @@ def bmat_pl4(a, b, xc, yc):
     bm = bm/detJ
     return bm, detJ
 
-
-calc_G(rho,total_F=1.0)
