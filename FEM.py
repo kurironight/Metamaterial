@@ -2,26 +2,26 @@ import numpy as np
 from scipy.sparse.linalg import spsolve
 from scipy.sparse import csr_matrix
 
-E=1 # ヤング率
+E = 1  # ヤング率
 #rho = np.ones((2, 2))
 
-rho=np.array([[1,1,0],
-                [1,0,0],
-                [1,0,0],
-                [1,1,1],]
-                )
-po = 0.3 #ポアソン比
-pnl=3 #ペナルティパラメータ
-t=1 #要素の厚み方向の長さ
-cut_thresh=10**(-2) # 材料が存在するかどうかの基準密度
+rho = np.array([[1, 1, 0],
+                [1, 0, 0],
+                [1, 0, 0],
+                [1, 1, 1], ]
+               )
+po = 0.3  # ポアソン比
+pnl = 3  # ペナルティパラメータ
+t = 1  # 要素の厚み方向の長さ
+cut_thresh = 10**(-2)  # 材料が存在するかどうかの基準密度
 
-## TODO バーを作成するプログラム
-
-
-## TODO バーの下，材料を配置するプログラム
+# TODO バーを作成するプログラム
 
 
-def calc_E(rho,cut_thresh=cut_thresh):
+# TODO バーの下，材料を配置するプログラム
+
+
+def calc_E(rho, cut_thresh=cut_thresh):
     """縦弾性係数を求める
 
     Args:
@@ -31,29 +31,33 @@ def calc_E(rho,cut_thresh=cut_thresh):
     Returns:
         numpy.float: 縦弾性係数
     """
-    rho[rho<cut_thresh]=0   
-    ny,nx=rho.shape
+    rho[rho < cut_thresh] = 0
+    ny, nx = rho.shape
     # 境界条件　左端x軸方向固定　上端y軸方向固定 右端　x正方向に分散荷重
-    FixDOF_left_edge = list(range(1, 2 * (ny + 1),2))
-    FixDOF_up_edge = list(range(2, 2 * (nx + 1)* (ny + 1),2 * (ny + 1)))
-    FixDOF=FixDOF_left_edge+FixDOF_up_edge
+    FixDOF_left_edge = list(range(1, 2 * (ny + 1), 2))
+    FixDOF_up_edge = list(range(2, 2 * (nx + 1) * (ny + 1), 2 * (ny + 1)))
+    FixDOF = FixDOF_left_edge+FixDOF_up_edge
 
     F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
-    F_index=np.where(rho[:,-1]!=0)[0]*2+ 2 * nx* (ny + 1) #python用のindexにした
-    F[F_index]+=1/2 #要素端部においての力が1/2になるようにする為
-    F[F_index+2]+=1/2
-    F=F/np.sum(F) # 分散荷重の大きさを正規化
+    F_index = np.where(rho[:, -1] != 0)[0]*2 + 2 * \
+        nx * (ny + 1)  # python用のindexにした
+    F[F_index] += 1/2  # 要素端部においての力が1/2になるようにする為
+    F[F_index+2] += 1/2
+    F = F/np.sum(F)  # 分散荷重の大きさを正規化
 
     # 有限要素法適用
-    U=FEM(rho,FixDOF,F)
-    U=U.reshape([-1,2])
-    element_exist_index= np.where(rho[:,-1]!=0)[0]+ nx* (ny + 1)#密度が１の要素における変位のみにフォーカス
-    element_exist_index=np.unique(np.concatenate([element_exist_index,element_exist_index+1]))
-    change=np.mean(U[element_exist_index,0])
-    E=(1/ny)/(change/nx) #応力/ひずみ
+    U = FEM(rho, FixDOF, F)
+    U = U.reshape([-1, 2])
+    element_exist_index = np.where(
+        rho[:, -1] != 0)[0] + nx * (ny + 1)  # 密度が１の要素における変位のみにフォーカス
+    element_exist_index = np.unique(np.concatenate(
+        [element_exist_index, element_exist_index+1]))
+    change = np.mean(U[element_exist_index, 0])
+    E = (1/ny)/(change/nx)  # 応力/ひずみ
     return E
 
-def calc_G(rho,cut_thresh=cut_thresh):
+
+def calc_G(rho, cut_thresh=cut_thresh):
     """せん断弾性係数を求める
 
     Args:
@@ -62,40 +66,43 @@ def calc_G(rho,cut_thresh=cut_thresh):
 
     Returns:
         numpy.float: せん断弾性係数
-    """ 
-    rho[rho<cut_thresh]=0  
-    left_rho=np.fliplr(rho).copy()
-    down_rho=np.concatenate([left_rho,rho],1)
-    up_rho=np.flipud(down_rho).copy()
-    whole_rho=np.concatenate([up_rho,down_rho],0)
-    ny,nx=whole_rho.shape
+    """
+    rho[rho < cut_thresh] = 0
+    left_rho = np.fliplr(rho).copy()
+    down_rho = np.concatenate([left_rho, rho], 1)
+    up_rho = np.flipud(down_rho).copy()
+    whole_rho = np.concatenate([up_rho, down_rho], 0)
+    ny, nx = whole_rho.shape
     # 境界条件　左端固定　右端　y正方向にせん断荷重
     FixDOF_left_edge = list(range(1, 2 * (ny + 1)))
-    FixDOF=FixDOF_left_edge
+    FixDOF = FixDOF_left_edge
 
     F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
-    F_index=np.where(whole_rho[:,-1]!=0)[0]*2+ 2 * nx* (ny + 1) #python用のindexにした
-    F[F_index+1]+=1/2 #要素端部においての力が1/2になるようにする為
-    F[F_index+3]+=1/2
-    F=F/np.sum(F) # 分散荷重の大きさを正規化
-    
+    F_index = np.where(whole_rho[:, -1] != 0)[0] * \
+        2 + 2 * nx * (ny + 1)  # python用のindexにした
+    F[F_index+1] += 1/2  # 要素端部においての力が1/2になるようにする為
+    F[F_index+3] += 1/2
+    F = F/np.sum(F)  # 分散荷重の大きさを正規化
+
     # 有限要素法適用
-    U=FEM(whole_rho,FixDOF,F)
-    U=U.reshape([-1,2])
-    element_exist_index= np.where(whole_rho[:,-1]!=0)[0]+ nx* (ny + 1)#密度が１の要素における変位のみにフォーカス
-    element_exist_index=np.unique(np.concatenate([element_exist_index,element_exist_index+1]))
-    change=np.mean(U[element_exist_index,1])
-    G=(1/nx)/(change/nx) #せん断応力/せん断ひずみ
+    U = FEM(whole_rho, FixDOF, F)
+    U = U.reshape([-1, 2])
+    element_exist_index = np.where(
+        whole_rho[:, -1] != 0)[0] + nx * (ny + 1)  # 密度が１の要素における変位のみにフォーカス
+    element_exist_index = np.unique(np.concatenate(
+        [element_exist_index, element_exist_index+1]))
+    change = np.mean(U[element_exist_index, 1])
+    G = (1/nx)/(change/nx)  # せん断応力/せん断ひずみ
     return G
 
 
-def FEM(rho,FixDOF,F):
-    K=make_K_mat(rho)
-    ny,nx=rho.shape
+def FEM(rho, FixDOF, F):
+    K = make_K_mat(rho)
+    ny, nx = rho.shape
     U = np.zeros((2 * (nx + 1) * (ny + 1)), dtype=np.float64)
     # Boundary Condition
     #F = np.zeros(2 * (nx + 1) * (ny + 1), dtype=np.float64)
-    #F[9-1]=10
+    # F[9-1]=10
 
     # 節点番号は1~2 * (nx + 1) * (ny + 1)まで
     FixDOF = list(range(1, 2 * (ny + 1)+1))
@@ -111,9 +118,10 @@ def FEM(rho,FixDOF,F):
     U[FixDOF] = 0
     return U
 
+
 def make_K_mat(rho):
     # 全体のK行列を作成
-    ny,nx=rho.shape
+    ny, nx = rho.shape
     K = np.zeros((2 * (nx + 1) * (ny + 1), 2 * (nx + 1)
                   * (ny + 1)), dtype=np.float64)
     for y in range(1, ny+1):
@@ -125,11 +133,12 @@ def make_K_mat(rho):
                              2*n2+1, 2*n2+2, 2*n1+1, 2*n1+2])
             xc = [x - 1, x, x, x - 1]  # x節点の範囲は0~nx
             yc = [y - 1, y - 1, y, y]  # y節点の範囲は0~ny
-            K_mat = Kmat_pl4(xc, yc, po,rho[y-1,x-1])
+            K_mat = Kmat_pl4(xc, yc, po, rho[y-1, x-1])
             elem -= 1  # indexを指定する為
             K[np.ix_(elem, elem)] += K_mat  # 深いコピーになる
     return K
-    
+
+
 def dmat_pl4(Eelem, po, nstr=1):
     # Dマトリックス作成
     # nstr=0の時，平面歪み，1の時，平面応力
@@ -151,7 +160,7 @@ def dmat_pl4(Eelem, po, nstr=1):
     return D_mat
 
 
-def Kmat_pl4(xc, yc, po,rho, t=t):
+def Kmat_pl4(xc, yc, po, rho, t=t):
     """各四角形事のKマトリックスを作成
 
     Args:
@@ -161,8 +170,8 @@ def Kmat_pl4(xc, yc, po,rho, t=t):
         rho(np.float): 要素の密度
         t (int, optional): z方向の要素の厚み.
     """
-    Emin=10**(-5)
-    Eelem= (E-Emin)*rho**pnl+Emin # 密度に対しての材料物性値の調整
+    Emin = 10**(-5)
+    Eelem = (E-Emin)*rho**pnl+Emin  # 密度に対しての材料物性値の調整
     K_mat = np.zeros((8, 8))
     D_mat = dmat_pl4(Eelem, po)
     point, weight = gauss_point()
@@ -231,4 +240,3 @@ def bmat_pl4(a, b, xc, yc):
     bm[2, 7] = J22*dn4a-J12*dn4b
     bm = bm/detJ
     return bm, detJ
-
