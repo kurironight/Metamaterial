@@ -7,12 +7,15 @@ import pickle
 from PIL import Image
 import os 
 from convert_npy_to_image import convert_folder_npy_to_image
+import time
+
+start = time.time()
 
 nx=20
 ny=20
 volume_frac=0.5
-parent=100
-generation=1
+parent=1000
+generation=50000
 PATH=os.path.join("data", "nx_{}_ny_{}".format(nx,ny),"gen_{}_pa_{}".format(generation,parent))
 os.makedirs(PATH, exist_ok=True)
 # 目的関数の設定
@@ -68,3 +71,9 @@ for solution in [s for s in nondominated_solutions if s.feasible]:
     np.save(os.path.join(PATH,'E_{}_G_{}.npy'.format(solution.objectives[0],solution.objectives[1])),image)
 
 convert_folder_npy_to_image(PATH)
+
+
+elapsed_time = time.time() - start
+
+with open("time.txt", mode='a') as f:
+    f.writelines("nx_{}_ny_{}_gen_{}_pa_{}:{}sec\n".format(nx,ny,generation,parent,elapsed_time))
