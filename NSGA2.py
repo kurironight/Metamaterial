@@ -17,6 +17,14 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path
     start = time.time()
 
     def objective(vars):
+        y_1, y_2, y_3, x_4, nodes, widths = convert_var_to_arg(vars)
+        edges = make_6_bar_edges(nx, ny, y_1, y_2, y_3, x_4, nodes, widths)
+        rho = make_bar_structure(nx, ny, edges)
+        volume = np.sum(rho)/(nx*ny)
+
+        return [calc_E(rho), calc_G(rho)], [volume]
+
+    def convert_var_to_arg(vars):
         y_1 = vars[0]
         y_2 = vars[1]
         y_3 = vars[2]
@@ -25,11 +33,7 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path
         node_x_indexes = vars[4 + 6 * 3: 4 + 6 * 3 * 2]
         nodes = np.stack([node_x_indexes, node_y_indexes], axis=1)
         widths = vars[4 + 6 * 3 * 2:]
-        edges = make_6_bar_edges(nx, ny, y_1, y_2, y_3, x_4, nodes, widths)
-        rho = make_bar_structure(nx, ny, edges)
-        volume = np.sum(rho)/(nx*ny)
-
-        return [calc_E(rho), calc_G(rho)], [volume]
+        return y_1, y_2, y_3, x_4, nodes, widths
 
     # 2変数2目的の問題
     problem = Problem(4+6*3*2+6*4, 2, 1)
@@ -74,11 +78,19 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path
     plt.close()
 
     for solution in [s for s in nondominated_solutions if s.feasible]:
-        image_list = []
-        for j in solution.variables:
-            image_list.append(j)
-        image = np.array(image_list).reshape(ny, nx-1)
-        image = np.concatenate([image, np.ones((ny, 1))], 1)
+        vars_list = []
+        for j in solution.variables[:3]:
+            vars_list.append(y_index_const.decode(j))
+        vars_list.append(x_index_const.decode(solution.variables[3]))
+        for j in solution.variables[4: 4 + 6 * 3]:
+            vars_list.append(y_index_const.decode(j))
+        for j in solution.variables[4 + 6 * 3: 4 + 6 * 3 * 2]:
+            vars_list.append(x_index_const.decode(j))
+        for j in solution.variables[4 + 6 * 3 * 2:]:
+            vars_list.append(bar_constraint.decode(j))
+        y_1, y_2, y_3, x_4, nodes, widths = convert_var_to_arg(vars_list)
+        edges = make_6_bar_edges(nx, ny, y_1, y_2, y_3, x_4, nodes, widths)
+        image = make_bar_structure(nx, ny, edges)
         np.save(os.path.join(PATH, 'E_{}_G_{}.npy'.format(
             solution.objectives[0], solution.objectives[1])), image)
 
