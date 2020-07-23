@@ -15,7 +15,6 @@ def make_bar_structure(x_size, y_size, edges):
     rho = np.zeros([y_size, x_size], dtype=np.float64)
     for edge in edges:
         put_bar(rho, edge[0], edge[1], edge[2])
-    rho = rho.astype(np.int32)
     return rho
 
 
