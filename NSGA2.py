@@ -9,7 +9,6 @@ from convert_npy_to_image import convert_folder_npy_to_image
 import time
 
 
-# 目的関数の設定
 def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path="data"):
     PATH = os.path.join(path, "bar_nx_{}_ny_{}".format(nx, ny),
                         "gen_{}_pa_{}".format(generation, parent))
