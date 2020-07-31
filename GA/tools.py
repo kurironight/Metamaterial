@@ -1,7 +1,36 @@
+from platypus import NSGAII
+from tqdm import tqdm
+from platypus import RandomGenerator, TournamentSelector
 import numpy as np
 import os
 import matplotlib.pyplot as plt
 import glob
+
+
+class Original_NSGAII(NSGAII):
+    """世代数を条件として指定することが出来る"""
+
+    def __init__(self, problem,
+                 population_size=100,
+                 generator=RandomGenerator(),
+                 selector=TournamentSelector(2),
+                 variator=None,
+                 archive=None,
+                 **kwargs):
+        super(NSGAII, self).__init__(
+            problem, population_size, generator, **kwargs)
+        self.selector = selector
+        self.variator = variator
+        self.archive = archive
+        self.generations = 0
+
+    def run(self, generation, callback=None):
+        for i in tqdm(range(generation)):
+            self.generations += 1
+            self.step()
+
+            if callback is not None:
+                callback(self)
 
 
 def convert_folder_npy_to_image(folder_path):
@@ -28,9 +57,3 @@ def convert_folder_npy_to_image(folder_path):
         dirname, basename = os.path.split(PATH)
         fig.savefig(os.path.join(dirname, "image_"+basename[:-4]+".png"))
         plt.close()
-
-
-"""
-convert_folder_npy_to_image(os.path.join(
-    "data\\bar_nx_20_ny_20\\gen_10_pa_10"))
-"""

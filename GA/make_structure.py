@@ -5,8 +5,8 @@ def make_bar_structure(x_size, y_size, edges):
     """edgesを基に，バーを用いた構造を作成する
 
     Args:
-        x_size (int): 目標とする1/4スケールの構造物のx方向のブロック数
-        y_size (int): 目標とする1/4スケールの構造物のy方向のブロック数
+        x_size (float): 目標とする1/4スケールの構造物のx方向のブロック数
+        y_size (float): 目標とする1/4スケールの構造物のy方向のブロック数
         edges (list): [エッジの始点，終点，太さ]のリスト
 
     Returns:
@@ -24,10 +24,10 @@ def make_6_bar_edges(X, Y, y_1, y_2, y_3, x_4, nodes, widths):
     Args:
         X (int): 目標とする1/4スケールの構造物のx方向のブロック数
         Y (int): 目標とする1/4スケールの構造物のy方向のブロック数
-        y_1 (int): 左のノードのy座標
-        y_2 (int): 右のノード1のy座標
-        y_3 (int): 右のノード2のy座標
-        x_4 (int): 上のノードのx座標
+        y_1 (float): 左のノードのy座標
+        y_2 (float): 右のノード1のy座標
+        y_3 (float): 右のノード2のy座標
+        x_4 (float): 上のノードのx座標
         nodes (list): (6*3,2) それぞれのノードの座標を示している．x,yの順．
         widths (list): (6*4) それぞれのエッジの太さを示す．
     """
