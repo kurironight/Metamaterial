@@ -55,8 +55,7 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
     problem.directions[:] = Problem.MAXIMIZE
 
     def print_result(algorithm):
-        nondominated_solutions = nondominated(algorithm.result)
-        for solution in [s for s in nondominated_solutions if s.feasible]:
+        for solution in [s for s in algorithm.result if s.feasible]:
             vars_list = [problem.types[i].decode(
                 solution.variables[i]) for i in range(problem.nvars)]
             y_1, y_2, y_3, x_4, nodes, widths = convert_var_to_arg(vars_list)
@@ -104,11 +103,12 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
     elapsed_time = time.time() - start
     generation = generation/parent  # generationに関する調整 TODO
     with open("time.txt", mode='a') as f:
-        f.writelines("bar_nx_{}_ny_{}_gen_{}_pa_vf{}:{}sec\n".format(
+        f.writelines("bar_nx_{}_ny_{}_gen_{}_pa_{}_vf_{}:{}sec\n".format(
             nx, ny, generation, parent, volume_frac, elapsed_time))
 
 
-def grid_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path="data"):
+def grid_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
+                  path="data"):
     PATH = os.path.join(path, "grid_nx_{}_ny_{}".format(nx, ny),
                         "gen_{}_pa_{}".format(generation, parent))
     os.makedirs(PATH, exist_ok=True)
