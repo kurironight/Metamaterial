@@ -9,7 +9,9 @@ from convert_npy_to_image import convert_folder_npy_to_image
 import time
 
 
-def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path="data"):
+def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
+                 path="data"):
+    generation = parent*generation
     PATH = os.path.join(path, "bar_nx_{}_ny_{}".format(nx, ny),
                         "gen_{}_pa_{}".format(generation, parent))
     os.makedirs(PATH, exist_ok=True)
@@ -40,8 +42,8 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path
     problem.directions[:] = Problem.MAXIMIZE
 
     # 決定変数の範囲を設定
-    x_index_const = Integer(1, nx)  # x座標に関する制約
-    y_index_const = Integer(1, ny)  # y座標に関する制約
+    x_index_const = Real(1, nx)  # x座標に関する制約
+    y_index_const = Real(1, ny)  # y座標に関する制約
     bar_constraint = Real(0, ny/2)  # バーの幅に関する制約
     problem.types[0:3] = y_index_const
     problem.types[3] = x_index_const
@@ -52,9 +54,21 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path
     problem.constraints[:] = "<="+str(volume_frac)
     problem.function = objective
     problem.directions[:] = Problem.MAXIMIZE
+
+    def print_result(algorithm):
+        nondominated_solutions = nondominated(algorithm.result)
+        for solution in [s for s in nondominated_solutions if s.feasible]:
+            vars_list = [problem.types[i].decode(
+                solution.variables[i]) for i in range(problem.nvars)]
+            y_1, y_2, y_3, x_4, nodes, widths = convert_var_to_arg(vars_list)
+            edges = make_6_bar_edges(nx, ny, y_1, y_2, y_3, x_4, nodes, widths)
+            image = make_bar_structure(nx, ny, edges)
+            np.save(os.path.join(PATH, 'E_{}_G_{}.npy'.format(
+                solution.objectives[0], solution.objectives[1])), image)
+
     algorithm = NSGAII(problem, population_size=parent,
                        variator=PCX())
-    algorithm.run(generation)
+    algorithm.run(generation, callback=print_result)
 
     # グラフを描画
 
