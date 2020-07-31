@@ -1,5 +1,5 @@
 from platypus import NSGAII, Problem, nondominated, Integer, Real, \
-    CompoundOperator, SBX, HUX, PM, BitFlip
+    CompoundOperator, SBX, HUX, PM, BitFlip, PCX
 import matplotlib.pyplot as plt
 from FEM import calc_E, calc_G
 from make_structure import make_bar_structure, make_6_bar_edges
@@ -53,7 +53,7 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path
     problem.function = objective
     problem.directions[:] = Problem.MAXIMIZE
     algorithm = NSGAII(problem, population_size=parent,
-                       variator=CompoundOperator(SBX(), HUX(), PM(), BitFlip()))
+                       variator=PCX())
     algorithm.run(generation)
 
     # グラフを描画
@@ -77,16 +77,8 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path
     plt.close()
 
     for solution in [s for s in nondominated_solutions if s.feasible]:
-        vars_list = []
-        for j in solution.variables[:3]:
-            vars_list.append(y_index_const.decode(j))
-        vars_list.append(x_index_const.decode(solution.variables[3]))
-        for j in solution.variables[4: 4 + 6 * 3]:
-            vars_list.append(y_index_const.decode(j))
-        for j in solution.variables[4 + 6 * 3: 4 + 6 * 3 * 2]:
-            vars_list.append(x_index_const.decode(j))
-        for j in solution.variables[4 + 6 * 3 * 2:]:
-            vars_list.append(bar_constraint.decode(j))
+        vars_list = [problem.types[i].decode(
+            solution.variables[i]) for i in range(problem.nvars)]
         y_1, y_2, y_3, x_4, nodes, widths = convert_var_to_arg(vars_list)
         edges = make_6_bar_edges(nx, ny, y_1, y_2, y_3, x_4, nodes, widths)
         image = make_bar_structure(nx, ny, edges)
