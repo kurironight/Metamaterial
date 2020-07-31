@@ -13,7 +13,7 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
                  path="data"):
     generation = parent*generation
     PATH = os.path.join(path, "bar_nx_{}_ny_{}".format(nx, ny),
-                        "gen_{}_pa_{}".format(generation, parent))
+                        "gen_{}_pa_{}_vf{}".format(generation, parent, volume_frac))
     os.makedirs(PATH, exist_ok=True)
     start = time.time()
 
@@ -104,8 +104,8 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
     elapsed_time = time.time() - start
 
     with open("time.txt", mode='a') as f:
-        f.writelines("bar_nx_{}_ny_{}_gen_{}_pa_{}:{}sec\n".format(
-            nx, ny, generation, parent, elapsed_time))
+        f.writelines("bar_nx_{}_ny_{}_gen_{}_pa_vf{}:{}sec\n".format(
+            nx, ny, generation, parent, volume_frac, elapsed_time))
 
 
 def grid_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100, path="data"):
