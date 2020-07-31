@@ -11,7 +11,6 @@ import time
 
 def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
                  path="data"):
-    generation = parent*generation
     PATH = os.path.join(path, "bar_nx_{}_ny_{}".format(nx, ny),
                         "gen_{}_pa_{}_vf{}".format(generation, parent, volume_frac))
     os.makedirs(PATH, exist_ok=True)
@@ -68,6 +67,7 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
 
     algorithm = NSGAII(problem, population_size=parent,
                        variator=PCX())
+    generation = parent*generation  # generationに関する調整 TODO
     algorithm.run(generation, callback=print_result)
 
     # グラフを描画
@@ -102,7 +102,7 @@ def bar_multi_GA(nx=20, ny=20, volume_frac=0.5, parent=400, generation=100,
     convert_folder_npy_to_image(PATH)
 
     elapsed_time = time.time() - start
-
+    generation = generation/parent  # generationに関する調整 TODO
     with open("time.txt", mode='a') as f:
         f.writelines("bar_nx_{}_ny_{}_gen_{}_pa_vf{}:{}sec\n".format(
             nx, ny, generation, parent, volume_frac, elapsed_time))
