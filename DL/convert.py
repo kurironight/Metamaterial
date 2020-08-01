@@ -6,6 +6,14 @@ import torch
 
 
 def convert_npy_to_torch(folder_path):
+    """folder_path内の"E_*_G_*.npy"のデータをDLが読み取れるように変換する
+
+    Args:
+        folder_path (str): npyファイルが多数あるフォルダのパス
+
+    Returns:
+        torch: 構造，E,Gをサンプル数*チャネル数*?の形のtorchで返す
+    """
     npy_list = glob.glob(os.path.join(folder_path, "E_*_G_*.npy"))
     save_path = os.path.join(folder_path, "for_load")
     if os.path.exists(save_path) and \
@@ -49,6 +57,3 @@ def convert_npy_to_torch(folder_path):
     G_data = torch.from_numpy(G_data)
 
     return structures, E_data, G_data
-
-
-convert_npy_to_torch("data/bar_nx_32_ny_32/gen_15_pa_5")
