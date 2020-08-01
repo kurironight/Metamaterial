@@ -3,16 +3,15 @@ import torch
 # for the training
 
 
-def train(model, loss_func, optimizer, input_loader, batch_size):
-    # 訓練モードへ
-
+def train(model, loss_func, optimizer, input_loader, batch_size, cuda):
     model.train()
-
     running_loss = 0
-    for ibatch_idx, [structure, E, G] in enumerate(input_loader):
+    for _, [structure, E, G] in enumerate(input_loader):
         # 一番最後、バッチサイズに満たない場合は無視する
-        if (structure.size()[0] != batch_size):
+        if (E.size()[0] != batch_size):
             break
+        if cuda:
+            structure, E, G = structure.cuda(), E.cuda(), G.cuda()
         optimizer.zero_grad()
         output_structure = model(E, G)
 

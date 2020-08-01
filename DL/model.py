@@ -13,7 +13,6 @@ class Generator(nn.Module):
         # 4*4
         self.c3 = nn.Conv2d(1, 2, kernel_size=3, stride=1, padding=1)
         self.a3 = nn.ReLU()
-        self.m2 = nn.MaxPool2d(2, 2)
         # 32*32
         self.c4 = nn.Conv2d(2, 1, kernel_size=3, stride=1, padding=1)
         self.a4 = nn.ReLU()
@@ -26,15 +25,12 @@ class Generator(nn.Module):
 
     def forward(self, E, G):
         x = torch.cat((E, G), dim=2)
-        print(x.size())
-        print(x.dtype)
         x = self.fc1(x)
         x = self.fc2(x)
         x = torch.reshape(x, (1, 1, 4, 4))
         # 4*4
         x = self.c3(x)
         x = self.a3(x)
-        x = self.m2(x)
         x = self.up(x)
         # 32*32
         x = self.c4(x)

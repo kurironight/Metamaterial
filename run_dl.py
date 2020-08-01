@@ -10,6 +10,8 @@ from sklearn.model_selection import train_test_split
 from DL.model import Generator
 from DL.train import train
 from DL.convert import convert_npy_to_torch
+from DL.evaluate import evaluate
+from tqdm import tqdm
 num = 0
 test = 0
 # hyperparameters
@@ -59,8 +61,6 @@ MAE = nn.L1Loss()
 # dataload
 structures, E_data, G_data = convert_npy_to_torch(data_dir)
 structures, E_data, G_data = structures.float(), E_data.float(), G_data.float()
-if cuda:
-    structures, E_data, G_data = structures.cuda(), E_data.cuda(), G_data.cuda()
 train_structures, test_structures,\
     train_E_data, test_E_data, \
     train_G_data, test_G_data = train_test_split(
@@ -77,41 +77,23 @@ test_loader = DataLoader(
 
 history = {}
 history['train_loss'] = []
-history['test_loss'] = []
+history['evaluate_loss'] = []
 
 best_loss = 1000
-for epoch in range(num_epochs):
+for epoch in tqdm(range(num_epochs)):
     start = time.time()
-    G_loss = train(model, MAE, optimizer, input_loader, batch_size)
-    elapsed_time = time.time()-start
-    print(str(elapsed_time)+"sec")
-    with torch.no_grad():
-        test_loss = 0
-    for tbatch_idx, [tinput_images, treal_images, tvol, tempty] in enumerate(test_loader):
-        # 一番最後、バッチサイズに満たない場合は無視する
-        if (tinput_images.size()[0] != batch_size or treal_images.size()[0] != batch_size or tvol.size()[0] != batch_size or tempty.size()[0] != batch_size):
-            break
-        tz = tinput_images  # 潜在ベクトル
-        # 条件入力ベクトルを入れたい
-        if cuda:
-            tz, tvol, tempty = tz.cuda(), tvol.cuda(), tempty.cuda()
-        start = time.time()
-        #test_result=generate(epoch + 1, model, tz,tvol,tempty, log_dir)
-        test_result = model(tz, tvol, tempty).data.cpu()
-        loss = MAE(treal_images, test_result).cpu()
-        test_loss = test_loss+loss.data
-    test_loss = (test_loss / len(test_loader))
-    if test_loss < best_loss:
-        best_loss = test_loss
+    train_loss = train(model, MAE, optimizer, input_loader, batch_size, cuda)
+    evaluate_loss = evaluate(model, MAE, optimizer,
+                             input_loader, batch_size, cuda)
+    if evaluate_loss < best_loss:
+        best_loss = evaluate_loss
         if torch.cuda.device_count() > 1:
             torch.save(model.module.state_dict(),
                        os.path.join(log_dir, 'GoodG.pth'))
         else:
             torch.save(model.state_dict(), os.path.join(log_dir, 'GoodG.pth'))
-    print('epoch %d, G_loss: %.4f test_loss: %.4f' %
-          (epoch + 1, G_loss, test_loss))
-    history['G_loss'].append(G_loss)
-    history['test_loss'].append(test_loss)
+    history['train_loss'].append(train_loss)
+    history['evaluate_loss'].append(evaluate_loss)
     # 学習履歴を保存
     with open(os.path.join(log_dir, 'history.pkl'), 'wb') as f:
         pickle.dump(history, f)
