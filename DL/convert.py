@@ -26,7 +26,7 @@ def convert_npy_to_torch(folder_path):
     else:
         print("データを新規変換する")
         # サンプル数*チャネル数*縦*横
-        structures = np.empty([1, 1, 32, 32], dtype=np.float64)
+        structures = np.empty([1, 1, 32, 32], dtype=np.int64)
         E_data = np.empty([1, 1, 1], dtype=np.float64)
         G_data = np.empty([1, 1, 1], dtype=np.float64)
 
@@ -37,7 +37,8 @@ def convert_npy_to_torch(folder_path):
             basename = os.path.basename(npy_path)
 
             chara_value = re.findall("E_(.*)_G_(.*).npy", basename)
-            E, G = [np.array([i], dtype=np.float64) for i in chara_value[0]]
+            E, G = [np.array([float(i)], dtype=np.float64)
+                    for i in chara_value[0]]
             E_data = np.concatenate(
                 [E_data, E[np.newaxis, np.newaxis, :]], axis=0)
             G_data = np.concatenate(

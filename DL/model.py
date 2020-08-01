@@ -27,6 +27,7 @@ class Generator(nn.Module):
     def forward(self, E, G):
         x = torch.cat((E, G), dim=2)
         print(x.size())
+        print(x.dtype)
         x = self.fc1(x)
         x = self.fc2(x)
         x = torch.reshape(x, (1, 1, 4, 4))
