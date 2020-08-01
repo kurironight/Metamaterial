@@ -11,7 +11,8 @@ from DL.train import train
 from DL.convert import convert_npy_to_torch
 from DL.evaluate import evaluate
 from tqdm import tqdm
-from DL.tools import shuffle_dataset
+from DL.tools import shuffle_dataset, plot_history
+
 
 num = 0
 test = 0
@@ -19,7 +20,7 @@ test = 0
 test_rate = 1/8
 batch_size = 50
 lr = 0.001
-num_epochs = 10
+num_epochs = 5
 
 #load_dir = './mae_nospade2'
 log_dir = "results/"
@@ -81,33 +82,33 @@ train_loader = DataLoader(
     train_loader, batch_size=batch_size, shuffle=True)
 eval_loader = DataLoader(
     eval_loader, batch_size=batch_size, shuffle=True)
-train_loader = DataLoader(
-    train_loader, batch_size=batch_size, shuffle=True)
+test_loader = DataLoader(
+    test_loader, batch_size=batch_size, shuffle=True)
 
 history = {}
 history['epoch'] = []
 history['train_loss'] = []
-history['evaluate_loss'] = []
-history['train_loss'] = []
+history['eval_loss'] = []
+history['test_loss'] = []
 
 best_loss = 1000
 for epoch in tqdm(range(num_epochs)):
     start = time.time()
     train_loss = train(model, MAE, optimizer, train_loader, batch_size, cuda)
-    evaluate_loss = evaluate(model, MAE, optimizer,
-                             eval_loader, batch_size, cuda)
+    eval_loss = evaluate(model, MAE, optimizer,
+                         eval_loader, batch_size, cuda)
     test_loss = evaluate(model, MAE, optimizer,
                          test_loader, batch_size, cuda)
-    if evaluate_loss < best_loss:
-        best_loss = evaluate_loss
+    if eval_loss < best_loss:
+        best_loss = eval_loss
         if torch.cuda.device_count() > 1:
             torch.save(model.module.state_dict(),
                        os.path.join(log_dir, 'Good.pth'))
         else:
             torch.save(model.state_dict(), os.path.join(log_dir, 'Good.pth'))
-    history['epoch'].append(train_loss)
+    history['epoch'].append(epoch+1)
     history['train_loss'].append(train_loss)
-    history['evaluate_loss'].append(evaluate_loss)
+    history['eval_loss'].append(eval_loss)
     history['test_loss'].append(test_loss)
     # 学習履歴を保存
     with open(os.path.join(log_dir, 'history.pkl'), 'wb') as f:
@@ -117,3 +118,4 @@ for epoch in tqdm(range(num_epochs)):
                    os.path.join(log_dir, 'last.pth'))
     else:
         torch.save(model.state_dict(), os.path.join(log_dir, 'last.pth'))
+plot_history(history, os.path.join(log_dir, 'learning_curve.png'))
