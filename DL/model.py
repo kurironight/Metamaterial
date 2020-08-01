@@ -27,7 +27,7 @@ class Generator(nn.Module):
         x = torch.cat((E, G), dim=2)
         x = self.fc1(x)
         x = self.fc2(x)
-        x = torch.reshape(x, (1, 1, 4, 4))
+        x = torch.reshape(x, (-1, 1, 4, 4))
         # 4*4
         x = self.c3(x)
         x = self.a3(x)
