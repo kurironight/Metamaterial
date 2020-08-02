@@ -5,14 +5,12 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import time
-from torch.utils.data import DataLoader
 from DL.model import Generator
 from DL.train import train
-from DL.convert import convert_npy_to_torch
 from DL.evaluate import evaluate
 from tqdm import tqdm
-from DL.tools import shuffle_dataset, plot_history
-
+from DL.tools import split_data_train_eval_test
+from DL.show_result import plot_history
 
 num = 0
 test = 0
@@ -20,10 +18,10 @@ test = 0
 test_rate = 1/8
 batch_size = 50
 lr = 0.001
-num_epochs = 5
+num_epochs = 20
 
 #load_dir = './mae_nospade2'
-log_dir = "results/"
+log_dir = "data/results/"
 
 data_dir = "data/bar_nx_32_ny_32/gen_500_pa_640_vf0.4"
 load_dir = 0
@@ -39,19 +37,11 @@ cuda = torch.cuda.is_available()
 if cuda:
     print('cuda available!')
     if torch.cuda.device_count() > 1:
-        if(load_dir):
-            PATH = os.path.join(load_dir, 'GoodG.pth')
-            model.load_state_dict(torch.load(PATH))
-        print('load for multi!')
         print('\nYou can use {} GPU'.format(torch.cuda.device_count()))
         model = nn.DataParallel(model).cuda()
     else:
         print('\n you use only one GPU')
         model.cuda()
-        if (load_dir):
-            PATH = os.path.join(load_dir, 'GoodG.pth')
-            model.load_state_dict(torch.load(PATH))
-            print('load!')
 
 
 # optimizer
@@ -61,29 +51,8 @@ optimizer = optim.Adam(model.parameters(), lr=lr, betas=(0.5, 0.999))
 MAE = nn.L1Loss()
 
 # dataload
-structures, E_data, G_data = convert_npy_to_torch(data_dir)
-structures, E_data, G_data = structures.float(), E_data.float(), G_data.float()
-print("データの数: ", structures.shape[0])
-
-train_structures, eval_structures,\
-    test_structures = shuffle_dataset(structures)
-train_E_data, eval_E_data,\
-    test_E_data = shuffle_dataset(E_data)
-train_G_data, eval_G_data,\
-    test_G_data = shuffle_dataset(G_data)
-train_loader = torch.utils.data.TensorDataset(
-    train_structures, train_E_data, train_G_data)
-eval_loader = torch.utils.data.TensorDataset(
-    eval_structures, eval_E_data, eval_G_data)
-test_loader = torch.utils.data.TensorDataset(
-    test_structures, test_E_data, test_G_data)
-
-train_loader = DataLoader(
-    train_loader, batch_size=batch_size, shuffle=True)
-eval_loader = DataLoader(
-    eval_loader, batch_size=batch_size, shuffle=True)
-test_loader = DataLoader(
-    test_loader, batch_size=batch_size, shuffle=True)
+train_loader, eval_loader, test_loader = split_data_train_eval_test(
+    data_dir, batch_size=batch_size)
 
 history = {}
 history['epoch'] = []

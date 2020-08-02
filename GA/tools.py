@@ -41,19 +41,23 @@ def convert_folder_npy_to_image(folder_path):
     """
     npy_list = glob.glob(os.path.join(folder_path, "*.npy"))
     for PATH in npy_list:
-        image = np.load(PATH)
-        left_image = np.fliplr(image).copy()
-        down_image = np.concatenate([left_image, image], 1)
-        up_image = np.flipud(down_image).copy()
-        whole_image = np.concatenate([up_image, down_image], 0)
-
-        ny, nx = whole_image.shape
-        x = np.arange(0, nx+1)  # x軸の描画範囲の生成。
-        y = np.arange(0, ny+1)  # y軸の描画範囲の生成。
-        X, Y = np.meshgrid(x, y)
-        fig = plt.figure()
-        _ = plt.pcolormesh(X, Y, whole_image, cmap="binary")
-        plt.axis("off")
+        structure = np.load(PATH)
         dirname, basename = os.path.split(PATH)
-        fig.savefig(os.path.join(dirname, "image_"+basename[:-4]+".png"))
-        plt.close()
+        save_path = os.path.join(dirname, "image_"+basename[:-4]+".png")
+        make_structure_from_numpy(structure, save_path)
+
+
+def make_structure_from_numpy(structure, save_path):
+    left_structure = np.fliplr(structure).copy()
+    down_structure = np.concatenate([left_structure, structure], 1)
+    up_structure = np.flipud(down_structure).copy()
+    whole_structure = np.concatenate([up_structure, down_structure], 0)
+    ny, nx = whole_structure.shape
+    x = np.arange(0, nx+1)  # x軸の描画範囲の生成。
+    y = np.arange(0, ny+1)  # y軸の描画範囲の生成。
+    X, Y = np.meshgrid(x, y)
+    fig = plt.figure()
+    _ = plt.pcolormesh(X, Y, whole_structure, cmap="binary")
+    plt.axis("off")
+    fig.savefig(save_path)
+    plt.close()
