@@ -6,8 +6,9 @@ class Generator(nn.Module):
 
     def __init__(self):
         super(Generator, self).__init__()
-        # encode
+        self.name = "rel_model"
 
+        # encode
         self.fc1 = nn.Linear(2, 16)
         self.fc2 = nn.Linear(16, 16)
         # 4*4
@@ -18,8 +19,6 @@ class Generator(nn.Module):
         self.up = nn.Upsample(scale_factor=8)
         self.rel = nn.ReLU()
         self.sig = nn.Sigmoid()  # 勾配消失問題に関わるから不適切
-
-        # initialize_weights(self)
 
     def forward(self, E, G):
         x = torch.cat((E, G), dim=2)
