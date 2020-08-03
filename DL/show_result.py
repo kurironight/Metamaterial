@@ -58,19 +58,34 @@ def save_test_results(dl_model, pth_path, data_dir, save_dir=None, data_num=None
         f.writelines("data_path:{}\n".format(data_dir))
         f.writelines("pth_path:{}\n".format(pth_path))
         f.writelines("DL_model:{}\n".format(dl_model()))
-        E_mean_error = np.mean(
-            (np.abs(np.array(outputs_E_list)-np.array(E_list))/np.array(E_list)))
-        E_max = np.max(np.abs(np.array(outputs_E_list) -
-                              np.array(E_list))/np.array(E_list))
-        G_mean_error = np.mean(
-            (np.abs(np.array(outputs_G_list)-np.array(G_list))/np.array(G_list)))
-        G_max = np.max(np.abs(np.array(outputs_G_list) -
-                              np.array(G_list))/np.array(G_list))
+        rates = [0.5, 0.6, 0.7, 0.8, 0.9, 1]
+        E_upper_mean_list, G_upper_mean_list, E_max, G_max = calc_E_G_order(
+            outputs_E_list, outputs_G_list, E_list, G_list, rates)
+
         f.writelines("Error: E mean {} max {}\n".format(
-            E_mean_error, E_max))
+            tuple(zip(rates, E_upper_mean_list)), E_max))
         f.writelines("Error: G mean {} max {}\n".format(
-            G_mean_error, G_max))
+            tuple(zip(rates, G_upper_mean_list)), G_max))
     show_structure_image(save_dir)
+
+
+def calc_E_G_order(outputs_E_list, outputs_G_list, E_list, G_list, rates):
+    data_num = len(outputs_E_list)
+    E_error = (np.abs(np.array(outputs_E_list) -
+                      np.array(E_list))/np.array(E_list))
+    E_error = np.sort(E_error)
+    E_max = np.max(E_error)
+    G_error = np.abs(np.array(outputs_G_list) -
+                     np.array(G_list))/np.array(G_list)
+    G_error = np.sort(G_error)
+    G_max = np.max(G_error)
+    E_upper_mean_list = []
+    G_upper_mean_list = []
+    print(E_error)
+    for rate in rates:
+        E_upper_mean_list.append(np.mean(E_error[:int(data_num*rate)]))
+        G_upper_mean_list.append(np.mean(G_error[:int(data_num*rate)]))
+    return E_upper_mean_list, G_upper_mean_list, E_max, G_max
 
 
 def make_result_list(model, data_dir, cuda, batch_size=64, data_num=None):
@@ -97,8 +112,8 @@ def make_result_list(model, data_dir, cuda, batch_size=64, data_num=None):
             output_structures = model(Es, Gs)
             output_structures = torch.reshape(output_structures, (-1, 32, 32))
             structures = torch.reshape(structures, (-1, 32, 32))
-            Es = torch.reshape(Es, (-1, 1))
-            Gs = torch.reshape(Gs, (-1, 1))
+            Es = torch.flatten(Es)
+            Gs = torch.flatten(Gs)
             output_structures = output_structures.to(
                 'cpu').detach().numpy().copy()
             structures = structures.to('cpu').detach().numpy().copy()
@@ -121,14 +136,14 @@ def make_result_list(model, data_dir, cuda, batch_size=64, data_num=None):
                     break
             if flag:
                 break
-    return E_list, G_list, outputs_E_list, outputs_G_list,\
+    return E_list, G_list, outputs_E_list, outputs_G_list, \
         output_structure_list, structure_list
 
 
 def plot_history(history, save_path, save_title="learning curve"):
     epochs = history['epoch']
-    train_loss, eval_loss, test_loss = history['train_loss'],\
-        history['eval_loss'], history['test_loss']
+    train_loss, eval_loss, test_loss = history['train_loss'],
+    history['eval_loss'], history['test_loss']
     epochs = np.array(epochs)
     train_loss = np.array(train_loss)
     eval_loss = np.array(eval_loss)
