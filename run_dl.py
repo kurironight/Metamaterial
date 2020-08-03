@@ -5,32 +5,35 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import time
-from DL.model import Generator
+import DL.model
 from DL.train import train
 from DL.evaluate import evaluate
 from tqdm import tqdm
 from DL.tools import split_data_train_eval_test
 from DL.show_result import plot_history
 
-num = 0
 test = 0
 # hyperparameters
-test_rate = 1/8
-batch_size = 50
+batch_size = 64
 lr = 0.001
-num_epochs = 20
+num_epochs = 1000
+model = DL.model.FirstModelBatch()
 
-#load_dir = './mae_nospade2'
-log_dir = "data/results/"
+log_dir = "data/results/{}_epoch{}_lr{}".format(model.name, num_epochs, lr)
 
 data_dir = "data/bar_nx_32_ny_32/gen_500_pa_640_vf0.4"
 load_dir = 0
-model = Generator()
+
 
 if(load_dir != 0):
     test = 1
 if not os.path.exists(log_dir):
     os.makedirs(log_dir)
+
+with open(os.path.join(log_dir, "model.txt"), mode='w') as f:
+    f.writelines("model_name:{}\n".format(model.name))
+    f.writelines("data_path:{}\n".format(data_dir))
+    f.writelines("DL_model:{}\n".format(model()))
 
 cuda = torch.cuda.is_available()
 
@@ -87,4 +90,11 @@ for epoch in tqdm(range(num_epochs)):
                    os.path.join(log_dir, 'last.pth'))
     else:
         torch.save(model.state_dict(), os.path.join(log_dir, 'last.pth'))
-plot_history(history, os.path.join(log_dir, 'learning_curve.png'))
+    with open(os.path.join(log_dir, "progress.txt"), mode='a') as f:
+        f.writelines('epoch %d, train_loss: %.4f eval_loss: %.4f test_loss: %.4f\n' %
+                     (epoch + 1, train_loss, eval_loss, test_loss))
+min_test_loss, min_epoch = plot_history(
+    history, os.path.join(log_dir, 'learning_curve.png'))
+with open(os.path.join(log_dir, "represent_value.txt"), mode='w') as f:
+    f.writelines('epoch %d,  minimum of testloss: %.4f\n' %
+                 (min_epoch, min_test_loss))

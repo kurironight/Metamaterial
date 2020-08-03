@@ -24,7 +24,7 @@ def shuffle_dataset(dataset, ratio=[8, 1, 1], seed=1):
     return train_dataset, val_dataset, test_dataset
 
 
-def split_data_train_eval_test(data_dir, batch_size=50):
+def split_data_train_eval_test(data_dir, batch_size=64):
     structures, E_data, G_data = convert_npy_to_torch(data_dir)
     structures, E_data, G_data = structures.float(), E_data.float(), G_data.float()
     print("データの数: ", structures.shape[0])

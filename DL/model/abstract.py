@@ -2,11 +2,11 @@ import torch
 import torch.nn as nn
 
 
-class Generator(nn.Module):
+class OriginModel(nn.Module):
 
     def __init__(self):
-        super(Generator, self).__init__()
-        self.name = "rel_model"
+        super(OriginModel, self).__init__()
+        self.name = "OriginModel"
 
         # encode
         self.fc1 = nn.Linear(2, 16)

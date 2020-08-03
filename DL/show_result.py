@@ -53,7 +53,7 @@ def save_test_results(dl_model, pth_path, data_dir, save_dir=None, data_num=None
     with open(os.path.join(save_dir, 'structure_list.pkl'), 'wb') as f:
         pickle.dump(structure_list, f)
 
-    with open(os.path.join(save_dir, "result.txt"), mode='a') as f:
+    with open(os.path.join(save_dir, "result.txt"), mode='w') as f:
         f.writelines("model_name:{}\n".format(model_name))
         f.writelines("data_path:{}\n".format(data_dir))
         f.writelines("pth_path:{}\n".format(pth_path))
@@ -73,7 +73,7 @@ def save_test_results(dl_model, pth_path, data_dir, save_dir=None, data_num=None
     show_structure_image(save_dir)
 
 
-def make_result_list(model, data_dir, cuda, batch_size=50, data_num=None):
+def make_result_list(model, data_dir, cuda, batch_size=64, data_num=None):
     print("データリスト作成開始")
     model.eval()
     _, _, test_loader = split_data_train_eval_test(
@@ -133,9 +133,10 @@ def plot_history(history, save_path, save_title="learning curve"):
     train_loss = np.array(train_loss)
     eval_loss = np.array(eval_loss)
     test_loss = np.array(test_loss)
-
-    print('minimum of testloss: ' + str(min(test_loss)))
-    print('min epoch is: ' + str(epochs[np.argmin(test_loss)]))
+    min_test_loss = min(test_loss)
+    min_epoch = epochs[np.argmin(test_loss)]
+    print('minimum of testloss: ' + str(min_test_loss))
+    print('min epoch is: ' + str(min_epoch))
 
     fig = plt.figure()
     ax = fig.add_subplot(1, 1, 1)
@@ -149,6 +150,7 @@ def plot_history(history, save_path, save_title="learning curve"):
     ax.set_title(save_title)
     plt.savefig(save_path)
     plt.close()
+    return min_test_loss, min_epoch
 
 
 def show_structure_image(data_dir):
