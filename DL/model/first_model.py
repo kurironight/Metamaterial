@@ -121,11 +121,11 @@ class FirstModel(nn.Module):
         return x
 
 
-class FirstModelResNet(FirstModel):
+class FirstModelSkip(FirstModel):
 
     def __init__(self):
-        super(FirstModelResNet, self).__init__()
-        self.name = "FirstModelResNet"
+        super(FirstModelSkip, self).__init__()
+        self.name = "FirstModelSkip"
 
     def forward(self, E, G):
         x = torch.cat((E, G), dim=2)
@@ -158,6 +158,8 @@ class FirstModelResNet(FirstModel):
 
 
 class FirstModel_252(FirstModel):
+    """CNNの一番最初の拡大部分を512→256に変更した
+    """
 
     def __init__(self):
         super(FirstModel_252, self).__init__()
@@ -196,6 +198,8 @@ class FirstModel_252(FirstModel):
 
 
 class FirstModelBatch(FirstModel):
+    """bath_normalaizationを結構ばらまいたモデル
+    """
 
     def __init__(self):
         super(FirstModelBatch, self).__init__()
@@ -227,6 +231,44 @@ class FirstModelBatch(FirstModel):
         # 16*16
         x = self.act(self.cvbn3(self.cv4(x)))
         x = self.act(self.cv5(x))
+        x = self.up(x)
+        # 32*32
+        x = self.act(self.cvbn4(self.cv6(x)))
+        x = self.act(self.cv7(x))
+        x = self.sig(self.cv8(x))
+
+        return x
+
+
+class FirstModelBatchSkip(FirstModelBatch):
+    """bath_normalaizationを結構ばらまいたモデル
+    """
+
+    def __init__(self):
+        super(FirstModelBatchSkip, self).__init__()
+        self.name = "FirstModelBatchSkip"
+
+    def forward(self, E, G):
+        x = torch.cat((E, G), dim=2)
+        x = self.act(self.bn1(self.fc1(x)))
+        x = self.act(self.bn2(self.fc2(x)))
+        x = self.act(self.bn3(self.fc3(x)))
+        x = self.act(self.bn4(self.fc4(x)))
+        x = torch.reshape(x, (-1, 1, 4, 4))
+        # 4*4
+        x = self.act(self.cvbn1(self.cv1(x)))
+        x = self.up(x)
+        # 8*8
+        x = self.act(self.cvbn2(self.cv2(x)))
+        h = x
+        x = self.act(self.cv3(x))
+        x = x+h
+        x = self.up(x)
+        # 16*16
+        x = self.act(self.cvbn3(self.cv4(x)))
+        h = x
+        x = self.act(self.cv5(x))
+        x = x+h
         x = self.up(x)
         # 32*32
         x = self.act(self.cvbn4(self.cv6(x)))
